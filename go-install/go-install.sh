@@ -1,6 +1,8 @@
 #!/bin/bash
 
-mkdir -p ~/src && cd ~/src
+TMP_DIR=$(mktemp -d -t go-install-XXXXXX)
+
+cd "$TMP_DIR" || exit
 
 # Detect the CPU architecture
 ARCH=$(uname -m)
@@ -47,14 +49,12 @@ add_env_vars() {
 # Detect the current shell
 current_shell=$(basename "$SHELL")
 
-# Update the configuration files based on the current shell
+# Update the profile files based on the current shell
 case "$current_shell" in
   bash)
-    add_env_vars "$HOME/.bashrc"
     add_env_vars "$HOME/.bash_profile"
     ;;
   zsh)
-    add_env_vars "$HOME/.zshrc"
     add_env_vars "$HOME/.zprofile"
     ;;
   *)
@@ -62,26 +62,21 @@ case "$current_shell" in
     ;;
 esac
 
-# Function to source configuration files if they exist
+# Function to source profile files if they exist
 source_if_exists() {
   local file=$1
   if [ -f "$file" ]; then
-    if [ "$current_shell" = "bash" ]; then
-      bash -c "source $file"
-    elif [ "$current_shell" = "zsh" ]; then
-      zsh -c "source $file"
-    else
-      . "$file"
-    fi
+    . "$file"
   fi
 }
 
-# Source the configuration files to apply changes
-source_if_exists "$HOME/.bashrc"
+# Source the profile files to apply changes
 source_if_exists "$HOME/.bash_profile"
-source_if_exists "$HOME/.zshrc"
 source_if_exists "$HOME/.zprofile"
 source_if_exists "$HOME/.profile"
 
 # Verify the installation
 go version
+
+# Remove the temporary directory
+rm -rf "$TMP_DIR"
