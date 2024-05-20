@@ -11,12 +11,14 @@ You can run the script directly from the terminal using either `curl` or `wget`.
 ### Using curl
 
 ```sh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/bariiss/shell-ansible/main/go-install.sh)"
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/bariiss/shell-ansible/main/go-install/go-install.sh)"
 
+```
 ### Using wget
 
 ```sh
-sh -c "$(wget -qO- https://raw.githubusercontent.com/bariiss/shell-ansible/main/go-install.sh)"
+sh -c "$(wget -qO- https://raw.githubusercontent.com/bariiss/shell-ansible/main/go-install/go-install.sh)"
+```
 
 ## What the Script Does
 
