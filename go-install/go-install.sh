@@ -53,12 +53,15 @@ current_shell=$(basename "$SHELL")
 case "$current_shell" in
   bash)
     add_env_vars "$HOME/.bash_profile"
+    profile_file="$HOME/.bash_profile"
     ;;
   zsh)
     add_env_vars "$HOME/.zprofile"
+    profile_file="$HOME/.zprofile"
     ;;
   *)
     add_env_vars "$HOME/.profile"
+    profile_file="$HOME/.profile"
     ;;
 esac
 
@@ -71,12 +74,13 @@ source_if_exists() {
 }
 
 # Source the profile files to apply changes
-source_if_exists "$HOME/.bash_profile"
-source_if_exists "$HOME/.zprofile"
-source_if_exists "$HOME/.profile"
+source_if_exists "$profile_file"
 
 # Verify the installation
 go version
 
 # Remove the temporary directory
 rm -rf "$TMP_DIR"
+
+# Inform the user to source the profile manually if needed
+echo "Please run 'source $profile_file' to apply the changes in the current session."
