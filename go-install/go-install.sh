@@ -1,7 +1,6 @@
 #!/bin/bash
 
 TMP_DIR=$(mktemp -d -t go-install-XXXXXX)
-
 cd "$TMP_DIR" || exit
 
 # Detect the CPU architecture
@@ -16,9 +15,20 @@ else
     exit 1
 fi
 
-# Fetch the latest Go version
-LATEST_VERSION=$(curl -s https://go.dev/VERSION?m=text | grep -o 'go[0-9.]*')
-LATEST_URL="https://go.dev/dl/${LATEST_VERSION}.linux-${GOARCH}.tar.gz"
+# Fetch the installed and latest Go versions, stripping 'go' prefix for comparison
+if command -v go &> /dev/null; then
+    INSTALLED_VERSION=$(go version | grep -o 'go[0-9.]*' | sed 's/go//' | tr -d '\n')
+else
+    INSTALLED_VERSION="none"
+fi
+
+# Check if Go is already installed
+if [ "$INSTALLED_VERSION" != "none" ]; then
+    echo "Go is already installed ($INSTALLED_VERSION)."
+    # Clean up the temporary directory before exiting
+    rm -rf "$TMP_DIR"
+    exit 0
+fi
 
 # Debugging output to verify correctness
 echo "Latest Go version: $LATEST_VERSION"
@@ -33,54 +43,30 @@ sudo tar -C /usr/local -xzf go_latest.tar.gz
 # Clean up by removing the tarball
 rm go_latest.tar.gz
 
-# Function to add environment variables to the specified file if not already present
-add_env_vars() {
-  local file=$1
-  touch "$file"
-  if ! grep -q '/usr/local/go/bin' "$file"; then
-    echo 'export PATH=$PATH:/usr/local/go/bin' >> "$file"
-  fi
-  if ! grep -q '\$HOME/go' "$file"; then
-    echo 'export GOPATH=$HOME/go' >> "$file"
-    echo 'export PATH=$PATH:$GOPATH/bin' >> "$file"
-  fi
-}
+# Tell the user that the installation is complete.
+echo "Go has been successfully installed."
 
-# Detect the current shell
+# Determine the user's shell and provide environment variable setup instructions
 current_shell=$(basename "$SHELL")
+if [ "$current_shell" = "zsh" ]; then
+    echo -e "\nTo set up Go environment variables, add the following lines to your .zshrc file:"
+    echo 'export PATH=$PATH:/usr/local/go/bin'
+    echo 'export GOPATH=$HOME/go'
+    echo 'export PATH=$PATH:$GOPATH/bin'
+    echo -e "\nThen run 'source ~/.zshrc' to apply the changes."
+elif [ "$current_shell" = "bash" ]; then
+    echo -e "\nTo set up Go environment variables, add the following lines to your .bashrc file:"
+    echo 'export PATH=$PATH:/usr/local/go/bin'
+    echo 'export GOPATH=$HOME/go'
+    echo 'export PATH=$PATH:$GOPATH/bin'
+    echo -e "\nThen run 'source ~/.bashrc' to apply the changes."
+else
+    echo -e "\nTo set up Go environment variables, add the following lines to your shell's profile file:"
+    echo 'export PATH=$PATH:/usr/local/go/bin'
+    echo 'export GOPATH=$HOME/go'
+    echo 'export PATH=$PATH:$GOPATH/bin'
+    echo -e "\nThen source the profile file to apply the changes."
+fi
 
-# Update the profile files based on the current shell
-case "$current_shell" in
-  bash)
-    add_env_vars "$HOME/.bash_profile"
-    profile_file="$HOME/.bash_profile"
-    ;;
-  zsh)
-    add_env_vars "$HOME/.zprofile"
-    profile_file="$HOME/.zprofile"
-    ;;
-  *)
-    add_env_vars "$HOME/.profile"
-    profile_file="$HOME/.profile"
-    ;;
-esac
-
-# Function to source profile files if they exist
-source_if_exists() {
-  local file=$1
-  if [ -f "$file" ]; then
-    . "$file"
-  fi
-}
-
-# Source the profile files to apply changes
-source_if_exists "$profile_file"
-
-# Verify the installation
-go version
-
-# Remove the temporary directory
+# Clean up the temporary directory
 rm -rf "$TMP_DIR"
-
-# Inform the user to source the profile manually if needed
-echo "Please run 'source $profile_file' to apply the changes in the current session."
