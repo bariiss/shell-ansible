@@ -1,133 +1,58 @@
-# Go Installation and Update Tools
+# Go Installation with Ansible - Local Setup
 
-This repository contains both shell scripts and Ansible playbooks for installing and updating Go on Linux systems. You can choose either method based on your needs.
+## 1. Create Inventory File
 
-## Repository Structure
+Create a file named `inventory` in your project root:
 
+```bash
+# From the project root
+echo "localhost ansible_connection=local" > inventory
+```
+
+Your file structure should look like:
 ```
 .
 └── go/
-    ├── install-go.yml   # Ansible playbook for installation
-    ├── install.sh       # Shell script for installation
-    ├── README.md        # This documentation
-    ├── update-go.yml    # Ansible playbook for updates
-    └── update.sh        # Shell script for updates
+    ├── install-go.yml
+    ├── install.sh
+    ├── README.md
+    ├── update-go.yml
+    └── update.sh
+└── inventory
 ```
 
-## Method 1: Shell Scripts
+## 2. Run the Playbook
 
-### Installation
+Now you can run the playbook in one of two ways:
 
-To install Go using the shell script:
-
+### Option 1: From project root
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/bariiss/shell-ansible/main/go/install.sh)"
+ansible-playbook -i inventory go/install-go.yml
 ```
 
-### Update
-
-To update an existing Go installation:
-
+### Option 2: From go directory
 ```bash
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/bariiss/shell-ansible/main/go/update.sh)"
+cd go
+ansible-playbook -i ../inventory install-go.yml
 ```
 
-## Method 2: Ansible Playbooks
+## For Local Testing
 
-### Prerequisites for Ansible Method
-
-- Ansible installed on the control node
-- SSH access to target hosts
-- Sudo privileges on target hosts
-
-### Installation
-
-1. Clone this repository or download the `install-go.yml` file
-2. Run the installation playbook:
-
+If you want to test the playbook with verbose output, add the `-v` flag:
 ```bash
-ansible-playbook -i inventory install-go.yml
+ansible-playbook -i inventory go/install-go.yml -v
 ```
 
-### Update
+## Common Issues
 
-1. Clone this repository or download the `update-go.yml` file
-2. Run the update playbook:
-
+1. If you get a "Permission denied" error, add `--ask-become-pass` or `-K`:
 ```bash
-ansible-playbook -i inventory update-go.yml
+ansible-playbook -i inventory go/install-go.yml -K
 ```
 
-## Features
-
-Both methods (shell scripts and Ansible playbooks) provide:
-
-- Automatic architecture detection (amd64/arm64)
-- Latest Go version installation
-- Existing installation detection
-- Environment variable setup
-- Clean temporary files
-- Easy update process
-
-## Environment Variables
-
-Both methods will configure the following environment variables:
-
+2. If you get Python interpreter warnings, you can specify the interpreter:
 ```bash
-export PATH=$PATH:/usr/local/go/bin
-export GOPATH=$HOME/go
-export PATH=$PATH:$GOPATH/bin
+ansible-playbook -i inventory go/install-go.yml -e 'ansible_python_interpreter=/usr/bin/python3'
 ```
 
-## System Requirements
-
-- Linux operating system
-- x86_64 (amd64) or aarch64 (arm64) architecture
-- `curl` or `wget` installed
-- sudo privileges
-
-## Shell Scripts vs Ansible Playbooks
-
-### Shell Scripts
-- Quick and easy to use
-- No additional dependencies needed
-- Good for single-server setups
-- Simple to execute with curl
-
-### Ansible Playbooks
-- Better for multiple servers
-- Idempotent execution
-- Better error handling
-- Infrastructure as Code approach
-- Good for automation pipelines
-
-## Troubleshooting
-
-Common issues and solutions:
-
-1. **Architecture not supported**
-   - Check if your system is x86_64 or aarch64
-   - Use `uname -m` to verify architecture
-
-2. **Permission denied**
-   - Ensure you have sudo privileges
-   - Check file permissions
-
-3. **Download fails**
-   - Verify internet connection
-   - Check if go.dev is accessible
-
-4. **Environment variables not working**
-   - Source your shell configuration file
-   - Verify the `/etc/profile.d/go.sh` file exists
-
-## Notes
-
-- The installation script will not overwrite an existing Go installation
-- The update script will remove the old Go installation before installing the new version
-- Both scripts create and clean up temporary directories automatically
-- Ansible playbooks are idempotent and can be safely run multiple times
-
-## Contributing
-
-Feel free to submit issues and pull requests for improvements to either the shell scripts or Ansible playbooks.
+The same instructions apply for `update-go.yml` - just replace the filename in the commands.
