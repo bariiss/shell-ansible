@@ -5,22 +5,30 @@
   vars:
     go_tmp_dir: "/tmp/go-install-{{ ansible_date_time.epoch }}"
     go_install_dir: "/usr/local"
+    actual_user: "{{ ansible_env.SUDO_USER | default(ansible_user_id) }}"
+    actual_home: "{{ ansible_env.HOME }}"
 
   tasks:
     - name: Detect CPU architecture
       set_fact:
         go_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' if ansible_architecture == 'aarch64' else 'unsupported' }}"
 
-    - name: Fail if architecture is unsupported
+    - name: Check architecture support
       fail:
         msg: "Unsupported architecture: {{ ansible_architecture }}"
       when: go_arch == 'unsupported'
 
-    - name: Check if Go is already installed
-      command: go version
+    - name: Check if Go binary exists
+      stat:
+        path: /usr/local/go/bin/go
+      register: go_binary
+
+    - name: Get current Go version if installed
+      command: /usr/local/go/bin/go version
       register: go_version_check
-      ignore_errors: true
       changed_when: false
+      when: go_binary.stat.exists
+      ignore_errors: true
 
     - name: Get latest Go version
       uri:
@@ -28,43 +36,58 @@
         return_content: yes
       register: latest_go_version
 
-    - name: Set Go version fact
+    - name: Set Go version facts
       set_fact:
-        go_version: "{{ latest_go_version.content | regex_replace('\\n', '') }}"
-        current_version: "{{ go_version_check.stdout | regex_search('go[0-9.]+') | default('none') }}"
+        go_version: "{{ latest_go_version.content | regex_search('go[0-9.]+') | regex_replace('\\n', '') }}"
+        current_version: "{{ go_version_check.stdout | default('none') | regex_search('go[0-9.]+') | default('none') }}"
+
+    - name: Show version information
+      debug:
+        msg: 
+          - "Current Go version: {{ current_version if current_version != 'none' else 'Not installed' }}"
+          - "Latest Go version: {{ go_version }}"
+
+    - name: Check if update/install is needed
+      set_fact:
+        needs_update: "{{ current_version != go_version or current_version == 'none' }}"
+
+    - name: Skip installation if up to date
+      debug:
+        msg: "Go {{ current_version }} is already at the latest version. No update needed."
+      when: not needs_update
 
     - name: Create temporary directory
       file:
         path: "{{ go_tmp_dir }}"
         state: directory
-        mode: "0755"
+        mode: '0755'
+      when: needs_update
 
-    - name: Download and install Go
+    - name: Download and install/update Go
       block:
         - name: Download Go
           get_url:
             url: "https://go.dev/dl/{{ go_version }}.linux-{{ go_arch }}.tar.gz"
             dest: "{{ go_tmp_dir }}/go.tar.gz"
-          when: current_version != go_version
 
         - name: Remove existing Go installation
           file:
             path: "{{ go_install_dir }}/go"
             state: absent
-          when: current_version != go_version
 
         - name: Extract Go
           unarchive:
             src: "{{ go_tmp_dir }}/go.tar.gz"
             dest: "{{ go_install_dir }}"
             remote_src: yes
-          when: current_version != go_version
 
+      when: needs_update
       always:
         - name: Clean up temporary directory
           file:
             path: "{{ go_tmp_dir }}"
             state: absent
+          when: needs_update
 
     - name: Set up environment variables in /etc/profile.d
       copy:
@@ -73,21 +96,40 @@
           export PATH=$PATH:/usr/local/go/bin
           export GOPATH=$HOME/go
           export PATH=$PATH:$GOPATH/bin
-        mode: "0644"
+        mode: '0644'
+      when: needs_update
+
+    - name: Get real username
+      command: whoami
+      register: username_result
+      become: false
+      changed_when: false
+      when: needs_update
 
     - name: Create GOPATH directory
       file:
-        path: "{{ ansible_env.HOME }}/go"
+        path: "{{ actual_home }}/go"
         state: directory
-        mode: "0755"
-        owner: "{{ ansible_user_id }}"
-      become: false
+        mode: '0755'
+        owner: "{{ username_result.stdout }}"
+        group: "{{ username_result.stdout }}"
+      become: true
+      when: needs_update
 
     - name: Verify Go installation
       command: /usr/local/go/bin/go version
       register: go_verify
       changed_when: false
+      when: needs_update
 
-    - name: Display Go version
+    - name: Display installation/update status
       debug:
-        msg: "Go {{ go_verify.stdout }} has been installed successfully"
+        msg: "{{ 'Go has been updated to' if go_binary.stat.exists else 'Go has been installed as' }} {{ go_verify.stdout }}"
+      when: needs_update
+
+    - name: Print environment setup instructions
+      debug:
+        msg: 
+          - "To start using Go, run:"
+          - "source /etc/profile.d/go.sh"
+      when: needs_update
