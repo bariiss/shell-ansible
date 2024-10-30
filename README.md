@@ -25,6 +25,11 @@ Your file structure should look like:
 
 Now you can run the playbook in one of two ways:
 
+### Quick Installation
+```bash
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/bariiss/shell-ansible/main/go/run-ansible.sh)"
+```
+
 ### Option 1: From project root
 ```bash
 ansible-playbook -i inventory go/install-go.yml
