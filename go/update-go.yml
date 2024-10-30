@@ -1,0 +1,94 @@
+---
+- name: Update Go Installation
+  hosts: all
+  become: true
+  vars:
+    go_tmp_dir: "/tmp/go-update-{{ ansible_date_time.epoch }}"
+    go_install_dir: "/usr/local"
+
+  tasks:
+    - name: Detect CPU architecture
+      set_fact:
+        go_arch: "{{ 'amd64' if ansible_architecture == 'x86_64' else 'arm64' if ansible_architecture == 'aarch64' else 'unsupported' }}"
+
+    - name: Fail if architecture is unsupported
+      fail:
+        msg: "Unsupported architecture: {{ ansible_architecture }}"
+      when: go_arch == 'unsupported'
+
+    - name: Check if Go is installed
+      command: go version
+      register: go_version_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Set installed version fact
+      set_fact:
+        installed_version: "{{ go_version_check.stdout | regex_search('go[0-9.]+') | regex_replace('go', '') if go_version_check.rc == 0 else 'none' }}"
+
+    - name: Get latest Go version
+      uri:
+        url: https://go.dev/VERSION?m=text
+        return_content: yes
+      register: latest_go_version
+
+    - name: Set latest version fact
+      set_fact:
+        latest_version: "{{ latest_go_version.content | regex_search('go[0-9.]+') | regex_replace('go', '') | regex_replace('\\n', '') }}"
+
+    - name: Check if update is needed
+      debug:
+        msg: "Go is already up-to-date ({{ installed_version }}). No update needed."
+      when: installed_version == latest_version
+
+    - name: Create temporary directory
+      file:
+        path: "{{ go_tmp_dir }}"
+        state: directory
+        mode: "0755"
+      when: installed_version != latest_version
+
+    - name: Display version information
+      debug:
+        msg:
+          - "Installed Go version: {{ installed_version }}"
+          - "Latest Go version: {{ latest_version }}"
+          - "Download URL: https://go.dev/dl/go{{ latest_version }}.linux-{{ go_arch }}.tar.gz"
+      when: installed_version != latest_version
+
+    - name: Update Go
+      block:
+        - name: Download latest Go version
+          get_url:
+            url: "https://go.dev/dl/go{{ latest_version }}.linux-{{ go_arch }}.tar.gz"
+            dest: "{{ go_tmp_dir }}/go_latest.tar.gz"
+
+        - name: Remove existing Go installation
+          file:
+            path: "{{ go_install_dir }}/go"
+            state: absent
+
+        - name: Extract Go
+          unarchive:
+            src: "{{ go_tmp_dir }}/go_latest.tar.gz"
+            dest: "{{ go_install_dir }}"
+            remote_src: yes
+
+      when: installed_version != latest_version
+
+    - name: Verify Go update
+      command: /usr/local/go/bin/go version
+      register: go_verify
+      changed_when: false
+      when: installed_version != latest_version
+
+    - name: Display updated Go version
+      debug:
+        msg: "Go has been updated successfully to {{ go_verify.stdout }}"
+      when: installed_version != latest_version
+
+    - name: Clean up temporary directory
+      file:
+        path: "{{ go_tmp_dir }}"
+        state: absent
+      when: installed_version != latest_version
