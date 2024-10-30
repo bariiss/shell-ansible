@@ -15,27 +15,25 @@ else
     exit 1
 fi
 
-# Fetch the installed and latest Go versions, stripping 'go' prefix for comparison
+# Check if Go is already installed
 if command -v go &> /dev/null; then
     INSTALLED_VERSION=$(go version | grep -o 'go[0-9.]*' | sed 's/go//' | tr -d '\n')
-else
-    INSTALLED_VERSION="none"
-fi
-
-# Check if Go is already installed
-if [ "$INSTALLED_VERSION" != "none" ]; then
-    echo "Go is already installed ($INSTALLED_VERSION)."
+    echo "Go is already installed (version $INSTALLED_VERSION). No installation needed."
     # Clean up the temporary directory before exiting
     rm -rf "$TMP_DIR"
     exit 0
 fi
+
+# Fetch the latest Go version and download URL
+LATEST_VERSION=$(curl -s https://go.dev/VERSION?m=text | grep -o 'go[0-9.]*')
+LATEST_URL="https://go.dev/dl/${LATEST_VERSION}.linux-${GOARCH}.tar.gz"
 
 # Debugging output to verify correctness
 echo "Latest Go version: $LATEST_VERSION"
 echo "Download URL: $LATEST_URL"
 
 # Download the latest Go version
-wget $LATEST_URL -O go_latest.tar.gz
+wget "$LATEST_URL" -O go_latest.tar.gz
 
 # Extract the downloaded tarball
 sudo tar -C /usr/local -xzf go_latest.tar.gz
@@ -43,7 +41,7 @@ sudo tar -C /usr/local -xzf go_latest.tar.gz
 # Clean up by removing the tarball
 rm go_latest.tar.gz
 
-# Tell the user that the installation is complete.
+# Inform the user that the installation is complete.
 echo "Go has been successfully installed."
 
 # Determine the user's shell and provide environment variable setup instructions
