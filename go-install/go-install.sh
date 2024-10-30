@@ -49,23 +49,29 @@ echo "Go has been successfully installed."
 # Determine the user's shell and provide environment variable setup instructions
 current_shell=$(basename "$SHELL")
 if [ "$current_shell" = "zsh" ]; then
-    echo -e "\nTo set up Go environment variables, add the following lines to your .zshrc file:"
+    echo ""
+    echo "To set up Go environment variables, add the following lines to your .zshrc file:"
     echo 'export PATH=$PATH:/usr/local/go/bin'
     echo 'export GOPATH=$HOME/go'
     echo 'export PATH=$PATH:$GOPATH/bin'
-    echo -e "\nThen run 'source ~/.zshrc' to apply the changes."
+    echo ""
+    echo "Then run 'source ~/.zshrc' to apply the changes."
 elif [ "$current_shell" = "bash" ]; then
-    echo -e "\nTo set up Go environment variables, add the following lines to your .bashrc file:"
+    echo ""
+    echo "To set up Go environment variables, add the following lines to your .bashrc file:"
     echo 'export PATH=$PATH:/usr/local/go/bin'
     echo 'export GOPATH=$HOME/go'
     echo 'export PATH=$PATH:$GOPATH/bin'
-    echo -e "\nThen run 'source ~/.bashrc' to apply the changes."
+    echo ""
+    echo "Then run 'source ~/.bashrc' to apply the changes."
 else
-    echo -e "\nTo set up Go environment variables, add the following lines to your shell's profile file:"
+    echo ""
+    echo "To set up Go environment variables, add the following lines to your shell's profile file:"
     echo 'export PATH=$PATH:/usr/local/go/bin'
     echo 'export GOPATH=$HOME/go'
     echo 'export PATH=$PATH:$GOPATH/bin'
-    echo -e "\nThen source the profile file to apply the changes."
+    echo ""
+    echo "Then source the profile file to apply the changes."
 fi
 
 # Clean up the temporary directory
