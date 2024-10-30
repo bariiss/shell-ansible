@@ -49,10 +49,11 @@ current_shell=$(basename "$SHELL")
 if [ "$current_shell" = "zsh" ]; then
     echo ""
     echo "To set up Go environment variables, add the following lines to your .zshrc file:"
+    echo "----------------------------------------"
     echo 'export PATH=$PATH:/usr/local/go/bin'
     echo 'export GOPATH=$HOME/go'
     echo 'export PATH=$PATH:$GOPATH/bin'
-    echo ""
+    echo "----------------------------------------"
     echo "Then run 'source ~/.zshrc' to apply the changes."
 elif [ "$current_shell" = "bash" ]; then
     echo ""
